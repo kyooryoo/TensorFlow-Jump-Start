@@ -190,3 +190,6 @@ train_metrics = estimator.evaluate(input_fn=train_input_fn)
 eval_metrics = estimator.evaluate(input_fn=eval_input_fn)
 print("train metrics: %r"% train_metrics)
 print("eval metrics: %r"% eval_metrics)
+
+# Reference:
+# https://www.tensorflow.org/get_started/get_started
