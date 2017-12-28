@@ -1,3 +1,6 @@
+# run the following code to enter tensorflow virtual envrionment
+# source ~/tensorflow/bin/activate
+
 # the hello world program in ML is MNIST, a simple computer vision dataset
 # it contains images of handwritten digits and labels for each about its digit
 
@@ -15,7 +18,7 @@
 
 # Softmax Regressions
 # softmax assigns probabilities to the possible things of an object can be.
-# it add up the evidence of input being in certain classes then convert that
+# it adds up the evidence of input being in certain classes then convert that
 # evidence into probabilities. first, we sum the weights of pixel intensities
 # of all images for a class, negative the weight if high intensity of the pixel
 # is against the image being in that class, and positive if it is in favor.
@@ -45,42 +48,65 @@ FLAGS = None
 def main(_):
   # Import data
   mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
+  
+  # Start TensorFlow InteractiveSession, which allows interleave operations
+  # to build a computation graph with ones that run the graph, otherwise
+  # the entire graph should be built before starting a session and launching
+  sess = tf.InteractiveSession()
 
   # Create the model
-  # for holding any number of MNIST images, None means any length dimension
+  # placeholder for holding any number of MNIST images
+  # None means any length dimension
   x = tf.placeholder(tf.float32, [None, 784])
-  W = tf.Variable(tf.zeros([784, 10])) # weight for each pixel of each class
-  b = tf.Variable(tf.zeros([10])) # bias for each class
+  # placeholder for loss and optimizer, for the target output classes
+  y_ = tf.placeholder(tf.float32, [None, 10])
+  # variable for the weight for each pixel of each class
+  W = tf.Variable(tf.zeros([784, 10]))
+  # variable for the bias for each class
+  b = tf.Variable(tf.zeros([10]))
+  # initialize all variables before using them in a session
+  sess.run(tf.global_variables_initializer())
+  ## or use the following line of code to initialize variables
+  ## tf.global_variables_initializer().run()
+  # the regression model multiply vectorized input images x 
+  # by the weight matrix, and add bias b
   y = tf.matmul(x, W) + b
 
-  # Define loss and optimizer
-  y_ = tf.placeholder(tf.float32, [None, 10])
-
+  # following section defines the loss function which indicates how bad the
+  # model's prediction was on a single sample. We try to minimize it while
+  # training across all the examples.
+  
   # Cross-Entropy is a function for determining the loss of a model
   # The raw formulation of cross-entropy, can be numerically unstable.
   #   cross_entropy = tf.reduce_mean(
   #     -tf.reduce_sum(y_ * tf.log(tf.nn.softmax(y)), reduction_indices=[1]))
   # But it reveals the true operation inside a cross-entropy function as above
   
-  # So here we use tf.nn.softmax_cross_entropy_with_logits on the raw
-  # outputs of 'y', and then average across the batch.
+  # apply the softmax on the model's unnormalized model predictioin and sum
+  # across all classes, then take the average over these sums.
   cross_entropy = tf.reduce_mean(
       tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
+  # use automatic differentiation to find the gradients of the loss with
+  # respect to each of the variables. the line of code below compute gradients, 
+  # compute parameter update steps, and apply update steps to the parameters.
   train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
 
-  sess = tf.InteractiveSession()
-  tf.global_variables_initializer().run()
   # stochastic training with different subset of small batches of random data
   # this is less expensive and has much of the same benefit as using all data
+  # train the model by repeatedly run the train_step to apply the gradient
+  # descent updates to the parameters.
   for _ in range(1000):
     batch_xs, batch_ys = mnist.train.next_batch(100)
     sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
 
-  # Test trained model
+  # use tf.argmax to find the highest entry in a tensor along some axis
+  # use tf.equal to compare prediction with the truth
   correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
   accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-  print(sess.run(accuracy, feed_dict={x: mnist.test.images,
-                                      y_: mnist.test.labels}))
+  feed_dict = {x: mnist.test.images, y_: mnist.test.labels}
+  print(sess.run(accuracy, feed_dict))
+  ## or
+  ## print(accuracy.eval(feed_dict))
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
